@@ -1,0 +1,14 @@
+{
+  "name": "ait",
+  "version": "0.2.0",
+  "description": "AIT Skill for Node-based specification orchestration and the prd-to-fsd-to-tdd-to-codegen workflow.",
+  "author": {
+    "name": "AIT contributors"
+  },
+  "skills": [
+    "./"
+  ],
+  "agents": [
+    "./agents/codegen-generator.md"
+  ]
+}
