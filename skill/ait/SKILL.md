@@ -12,6 +12,7 @@ AIT 的主线是 `PRD → FSD → TDD → codegen → artifact → receipt → a
 - 需要 Node.js >=22。首次入口必须从“当前加载的本 `SKILL.md` 的绝对目录”解析：Windows 调同目录 `bin/ait.cmd`，POSIX 调 `bin/ait`。保持 cwd 为目标项目根；不要切到 Skill 目录执行用户项目初始化，也不要依赖占位符或未定义环境变量。
 - 初始化后从包含 `project-docs/` 的项目根优先使用 `project-docs/.ait/ait-cli.cmd`（Windows）或 `project-docs/.ait/ait-cli`（POSIX）。包或 Node 路径变化时，用新的 Skill 绝对入口执行 `init --refresh-wrapper`；它只刷新 wrapper，不清理历史 `config.local.yaml` 字段。
 - `AIT_CORE_BIN` 可显式覆盖 core 入口。Skill 自带 wrapper 默认寻找自身 `node_modules/ait-core/dist/src/bin.js`。
+- 分发安装使用 `node install.mjs install|update|uninstall|check --prefix <skill-dir>`；metadata 为 `.ait-install.json`。update/uninstall 默认把旧安装备份到 `~/.ait-skills-backups`，可用 `--backup-dir` 改写；旧 Python 安装只有显式 `update --replace-legacy` 才可迁移。兼容的 `--core-tarball` / `--check` 入口保留。
 - 不直接写 `project-docs/docs`、`project-docs/versions` 或 `project-docs/.meta`。仓外草稿通过正式 create 输入。
 - stdout 通常是单个 `{ok:true,data}` / `{ok:false,code,error}` JSON；stderr 可输出阶段 progress JSON 行；exit 0/1 只反映外层 `ok`。例外：`baseline-summary` 默认成功输出 YAML 数组，`--format json` 才返回 JSON。
 - 开发中的常规写入、提交和合入延续用户已授权的目标，不逐条重复询问。回滚、删除或外部发布须匹配具体授权；仅查询状态的请求不会触发这些写操作。
@@ -76,6 +77,8 @@ CLI `codegen prepare` 只返回仓外 bundle 指针：`bundle_path,sha256,bytes,
 5. 运行 `acceptance run` 并核对 `ran/passed/exitCode`。`ran:false,passed:true` 是跳过，不是测试通过。
 6. 最后按授权 confirm，再 merge。重复 prepare 或后续制品变化会使旧 token/字节绑定失效，须重新交付、核对、验证与登记。
 
+已合入版本的 receipt 是历史只读证据：当时的 write token 过期不等于历史记录无效。读取时把历史合入绑定与当前目标文件实时指纹分开；出现 current drift 时创建新版本处理，不能用旧 prepare/token 重登来覆盖历史或洗白当前变化。
+
 Node core 不创建 agent。同步 API `core.guard.evaluate({toolName,input})` 只有宿主真实接入、映射工具字段并执行 `block` 时才有拦截效果；普通 Markdown Skill 只能形成约定性治理，不能声称钩子已安装或单文件权限已强制。
 
 ## 结果判读与恢复
@@ -101,4 +104,6 @@ Node core 不创建 agent。同步 API `core.guard.evaluate({toolName,input})` �
 ## 历史与范围边界
 
 旧 Python 管理的项目只承诺由 Node 单向接管：先 `init --check`，再由新入口 `init --refresh-wrapper`；保留历史规格、索引、图与 Git 历史，不混用两套 writer，也不保证旧运行时反向读取 Node 扩展数据。中途流程接续、真实宿主 UI 加载、插件发现与 LLM 语义质量必须独立验证，不能仅凭文档宣称完成。
+
+宿主触发以实际加载目录及 manifest 为准，不依赖分发文档中的机器绝对路径。已验证“发现/校验”不能冒充真实生成、工具拦截或用户安装升级已经完成。
 

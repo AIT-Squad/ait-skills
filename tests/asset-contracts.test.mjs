@@ -182,10 +182,10 @@ function fill(name) {
 
 test('distributed assets, manifests, links and runtime are internally complete', () => {
   const packageJson = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
-  assert.deepEqual({ name: packageJson.name, version: packageJson.version, private: packageJson.private, type: packageJson.type }, { name: 'ait-skills', version: '0.2.0', private: true, type: 'module' });
-  assert.equal(packageJson.scripts.test, 'node --test tests/asset-contracts.test.mjs');
+  assert.deepEqual({ name: packageJson.name, version: packageJson.version, private: packageJson.private, type: packageJson.type }, { name: 'ait-skills', version: '0.3.0', private: true, type: 'module' });
+  assert.equal(packageJson.scripts.test, 'node --test tests/*.test.mjs');
   assert.match(packageJson.engines.node, />=22/);
-  assert.equal(coreManifest.version, '0.2.0');
+  assert.equal(coreManifest.version, '0.2.1');
   assert.equal(coreManifest.name, 'ait-core');
   const binRel = typeof coreManifest.bin === 'string' ? coreManifest.bin : coreManifest.bin.ait;
   assert.ok(existsSync(resolve(dirname(corePackage), binRel)));
@@ -193,7 +193,7 @@ test('distributed assets, manifests, links and runtime are internally complete',
 
   const plugin = JSON.parse(readFileSync(join(skill, '.claude-plugin', 'plugin.json'), 'utf8'));
   assert.equal(plugin.name, 'ait');
-  assert.equal(plugin.version, '0.2.0');
+  assert.equal(plugin.version, '0.3.0');
   for (const field of ['skills', 'agents']) {
     assert.ok(Array.isArray(plugin[field]) && plugin[field].length);
     for (const item of plugin[field]) {
@@ -226,12 +226,16 @@ test('every distributed target has one TDD owner, preserving declared path case'
   process.chdir(old);
   const versions = await core.version.list();
   assert.equal(versions.ok, true);
-  const graph = await core.graph.export({ version: 'v0.2' });
+  const active = versions.data.versions.filter(item => !item.merged);
+  assert.ok(active.length <= 1);
+  const selected = active[0]?.version ?? 'baseline';
+  const graph = await core.graph.export(active[0] ? { version: selected } : undefined);
   assert.equal(graph.ok, true);
   const effective = new Map();
   const tddFiles = [
     ...filesUnder(join(repo, 'project-docs', 'docs', 'tdd'), false),
-    ...filesUnder(join(repo, 'project-docs', 'versions', 'v0.2', 'tdd'), false),
+    ...(active[0] && existsSync(join(repo, 'project-docs', 'versions', selected, 'tdd'))
+      ? filesUnder(join(repo, 'project-docs', 'versions', selected, 'tdd'), false) : []),
   ];
   for (const path of tddFiles) {
     const text = readFileSync(path, 'utf8');
@@ -245,12 +249,12 @@ test('every distributed target has one TDD owner, preserving declared path case'
   for (const [id, target] of effective) {
     const key = pathKey(target);
     assert.equal(owners.has(key), false, `${target} has multiple effective TDD owners`);
-    const related = await core.graph.query({ target: id, direction: 'in', rels: ['details'], version: 'v0.2' });
+    const related = await core.graph.query({ target: id, direction: 'in', rels: ['details'], version: selected });
     assert.equal(related.ok, true);
     assert.equal(related.data.edges.filter(edge => edge.dst === id).length, 1, `${id} requires one details parent`);
     owners.set(key, { id, target });
   }
-  const distributed = ['package.json', 'tests/asset-contracts.test.mjs', ...filesUnder(skill).filter((p) => !p.includes(`${join(skill, 'node_modules')}`)).map((p) => relative(repo, p).replaceAll('\\', '/'))];
+  const distributed = ['package.json', 'tests/asset-contracts.test.mjs', 'tests/installation.test.mjs', ...filesUnder(skill).filter((p) => !p.includes(`${join(skill, 'node_modules')}`)).map((p) => relative(repo, p).replaceAll('\\', '/'))];
   for (const target of distributed) {
     const key = pathKey(target);
     assert.ok(owners.has(key), `missing TDD owner for ${target}`);
@@ -338,6 +342,11 @@ test('templates drive the real CLI through receipt, negative checks, acceptance,
   assert.equal(merged.version, 'v0.1');
   const status = ok(cli(project, 'version', 'status', 'v0.1'));
   assert.equal(status.phase, 'merged');
+  const historicalBefore = managedSnapshot(project);
+  const historical = ok(cli(project, 'codegen', 'verify', '--version', 'v0.1'));
+  assert.deepEqual(historical.findings, []);
+  fail(cli(project, 'codegen', 'receipt', '--generation-token', third.generation_token), 'GENERATION_TOKEN_STALE');
+  assert.deepEqual(managedSnapshot(project), historicalBefore);
 
   const summaryJson = ok(cli(project, 'baseline-summary', '--scope', 'prd', '--format', 'json'));
   const summaryYaml = cliRaw(project, 'baseline-summary', '--scope', 'prd');

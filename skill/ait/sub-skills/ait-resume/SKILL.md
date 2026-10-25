@@ -23,10 +23,12 @@ description: INVOKE THIS SKILL when an AIT CLI command fails or the user asks ho
 - `ROOT_CHUNK_REQUIRED`、`PRD_REQUIREMENT_CONTRACT_VIOLATION`、`TDD_TARGET_FILE_REQUIRED`、`DUPLICATE_TARGET_FILE`：修正文档后重试；不手改受管文件。
 - `COMMIT_EMPTY`：逐层 confirm 已提交全部变更时可以是正常事实；不要反复 commit。
 - `GENERATION_TOKEN_STALE` / `GENERATION_SPEC_CHANGED` / `GENERATION_ARTIFACT_CHANGED`：重新 prepare，完整核对 bundle，真实生成并验证目标，再登记 receipt 和 verify；不得补造回执。
+- merged 历史核验：旧 write token 过期不等于历史 receipt 无效；若只读结果显示 current drift，保留历史记录并用新版本处理当前制品，不能以历史 prepare/登记洗白。
 - `ACCEPTANCE_FAILED`：修复制品并重跑 acceptance；`ran:false,passed:true` 只是未配置而跳过。
 - `CONFIRMATION_STALE`：重新执行 `version confirm <v>`，读取其验收与计划结果。confirm 有写入/Git 副作用，不是查询。
 - `MERGE_ROLLBACK` / `REVERT_PRECHECK_FAILED`：保留恢复详情，核对 state、version status 与双仓 Git 后再决定；不能笼统保证所有外部副作用已回滚。
 - `PUSH_NO_REMOTE` / `PUSH_NO_UPSTREAM` / `PUSH_FAILED`：核对内层 host/docs 状态；用户仍授权发布时先 `push --dry-run`。
+- 安装器失败：先区分 Node/PATH、npm 输出、`CORE_INSTALL_FAILED`、`NOT_MANAGED` 和切换失败；保留 `.ait-install.json`、prefix 与返回的 `backup` 事实。不要在不确定受管范围时删除 prefix；旧 Python 安装仅用显式 `update --replace-legacy`，默认备份目录为 `~/.ait-skills-backups`，必要时用 `--backup-dir`。
 
 ## 回滚与授权
 

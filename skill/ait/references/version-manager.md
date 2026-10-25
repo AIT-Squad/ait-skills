@@ -49,6 +49,8 @@ empty
 
 codegen receipt 把制品字节绑定到一次交付。`codegen verify --version <v>` 的外层只有 `ok`；业务 `passed` 位于 `data` 内层，并且报告策略下 `data.passed:true` 仍可能携带非空 `findings`。主编排者必须检查 findings，而不是只看退出码、外层 `ok` 或内层 `passed`。回执不证明测试质量。
 
+版本已 merged 后，回执按合入时记录进行历史只读比较；当时的 write token 后续过期，不会反向使历史记录无效。当前目标文件另算实时指纹，偏离历史合入字节时报告 current drift。处理漂移必须创建新版本并重新 prepare/receipt/acceptance/confirm/merge，不能复用旧 token 或改写历史记录。
+
 ## Confirm 与宿主 Git
 
 版本 confirm 可能自动提交宿主 Git，并把该宿主状态纳入确认计划。调用前应确认工作树、当前分支和预期提交范围。任何后续制品修改都需要重新 prepare/receipt/verify，并重新 confirm。
